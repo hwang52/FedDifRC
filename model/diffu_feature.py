@@ -386,47 +386,8 @@ class SDFeaturizer4Eval(SDFeaturizer):
         return unet_ft
 
 
-def embedding_pca(embeddings, n_components=3, as_rgb=True):
-    '''
-    输入:
-    embeddings: 网络的特征，维度为[C, H, W]
-    n_components: 将网络的特征降维成多少个通道，默认为3，即图片的RGB三个通道
-    as_rgb: 是否转换为图片格式，默认为是
-    输出:
-    embed_flat: 一个通道数量为3的图片矩阵，维度为[H, W, 3]
-    函数返回的结果，可以通过cv2等工具直接保存为图片
-    例如: cv2.imwrite('pca.png', embed_flat)
-    '''
-
-    pca = PCA(n_components=n_components)
-    embed_dim = embeddings.shape[0]
-    shape = embeddings.shape[1:]
-    # shape = (14,14)
-
-    embed_flat = embeddings.reshape(embed_dim, -1).T
-    embed_flat = pca.fit_transform(embed_flat).T
-    embed_flat = embed_flat.reshape((n_components,) + shape)
-
-    if as_rgb:
-        embed_flat = 255 * (embed_flat - embed_flat.min()) / np.ptp(embed_flat)
-        embed_flat = np.transpose(embed_flat, (1,2,0))
-        embed_flat = embed_flat.astype('uint8')
-    return embed_flat
-
-
-
-
-
 if __name__=='__main__':
     parser = argparse.ArgumentParser('Test Diffusion Features')
     parser.add_argument('--device', type=str, default='cuda:0', help='use gpu or cpu')
     args = parser.parse_args()
     dift_extractor = SDFeaturizer(args=args)
-    filepath = '../data/cat.jpg'
-    img = Image.open(filepath).convert('RGB')
-    img = img.resize((768, 768))
-    img_tensor = (PILToTensor()(img) / 255.0 - 0.5) * 2
-    img_tensor = img_tensor.repeat(1, 1, 1, 1).to(args.device)
-    prompt = 'a photo of a cat'
-    layer_id = 4
-    dift_fea = dift_extractor.forward_list(img_tensor=img_tensor, prompt=prompt, t=0, up_ft_index=[1,2,3])
